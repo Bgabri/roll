@@ -1,0 +1,6 @@
+-cp src
+-lib tink_cli
+-w -WDeprecated
+-main Roll
+# -main StopWatch
+# --debug
