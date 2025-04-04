@@ -1,17 +1,15 @@
+import haxe.macro.Type.Ref;
+import haxe.Exception;
 
-import tink.core.Error;
-import tink.CoreApi.Noise;
-import tink.CoreApi.Outcome;
-
-import haxe.Rest;
-
-import sys.thread.Lock;
-
-import tui.Animation;
+import bglib.cli.Exit;
+import bglib.cli.Doc;
+import bglib.cli.exceptions.MalformedRequest;
+import bglib.macros.UnpackingException;
 
 import tink.Cli;
+import tink.cli.Rest;
 
-import haxe.Timer;
+using bglib.macros.UnPack;
 
 typedef Die = {
     var rolls:Int;
@@ -20,40 +18,11 @@ typedef Die = {
     var throws:Int;
 }
 
-class SubCommand {
-    public function new() {}
-
-    @:defaultCommand
-    public function run(rest:Rest<String>) {
-        Sys.println('sub $rest');
-    }
-}
-
-class Exit {
-    public static function handler(result:Outcome<Noise, Error>) {
-        switch result {
-            case Success(_):
-                Sys.exit(0);
-            case Failure(e):
-                trace(e.toString());
-                // var message = e.message;
-                // if (e.data != null) message += ', ${e.data}';
-                // Sys.println(message);
-                // Sys.exit(e.code);
-        }
-    }
-}
-
 /**
- * 
-**/
+ * dd
+ **/
+@:build(bglib.cli.BaseCommand.build(true, "roll"))
 class Roll {
-    static function main() {
-        Cli.process(Sys.args(), new Roll()).handle(function(o) {
-            Exit.handler(o);
-        });
-    }
-
     /**
      * Animates the dice rolls.
     **/
@@ -63,8 +32,6 @@ class Roll {
      * Calculates the total of each throw.
     **/
     public var total:Bool = false;
-
-    private function new() {}
 
     function rollDie(die:Die):Int {
         return Std.random(die.size) + 1 + die.bonus;
@@ -88,24 +55,17 @@ class Roll {
         }
     }
 
-    @:command
-    public var help = new SubCommand();
-
     /**
      * Rolls a set of dice.
      * @param die #d#+#x#, where # are ints
     **/
-    @:defaultCommand
-    public function roll(die:String) {
+    function roll(die:String) {
         #if debug
         @SuppressWarning("checkstyle:Trace")
         trace(die);
         #end
         var reg = ~/(\d+)d(\d+)(\+(\d+))?(x(\d+))?/gi;
-        if (!reg.match(die)) {
-            Sys.println("invalid");
-            return;
-        }
+        if (!reg.match(die)) throw new MalformedRequest("Invalid die format.");
         var d:Die = {
             rolls: Std.parseInt(reg.matched(1)),
             size: Std.parseInt(reg.matched(2)),
@@ -115,5 +75,9 @@ class Roll {
         if (reg.matched(4) != null) d.bonus = Std.parseInt(reg.matched(4));
         if (reg.matched(6) != null) d.throws = Std.parseInt(reg.matched(6));
         throwDice(d);
+    }
+
+    static function create():Roll {
+        return new Roll();
     }
 }

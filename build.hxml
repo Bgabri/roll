@@ -1,4 +1,5 @@
 common.hxml
+# -D debug=3
 --debug
 --run Roll
 # --interp

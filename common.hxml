@@ -1,6 +1,6 @@
 -cp src
 -lib tink_cli
+-lib bglib
 -w -WDeprecated
--main Roll
 # -main StopWatch
 # --debug
