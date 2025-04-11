@@ -1,3 +1,4 @@
 common.hxml
 -cpp bin/cpp
 --dce full
+--main Roll

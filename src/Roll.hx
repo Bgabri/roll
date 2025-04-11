@@ -1,16 +1,10 @@
-import haxe.macro.Type.Ref;
-import haxe.Exception;
-
-import bglib.cli.Exit;
-import bglib.cli.Doc;
 import bglib.cli.exceptions.MalformedRequest;
-import bglib.macros.UnpackingException;
 
-import tink.Cli;
-import tink.cli.Rest;
+using bglib.utils.PrimitiveTools;
 
-using bglib.macros.UnPack;
-
+/**
+ * Represents a die.
+**/
 typedef Die = {
     var rolls:Int;
     var size:Int;
@@ -19,39 +13,48 @@ typedef Die = {
 }
 
 /**
- * dd
- **/
+ * Usage:
+ *     roll [flags] <die-str>
+ *         <die-str> ::= <int> 'd' <int> <bonus>? <throws>?
+ *           <bonus> ::= '+' <int>
+ *          <throws> ::= 'x' <int>
+ *     for example: roll 2d6+1x3
+**/
 @:build(bglib.cli.BaseCommand.build(true, "roll"))
+@:build(bglib.macros.ExceptionHandler.handle())
 class Roll {
     /**
-     * Animates the dice rolls.
-    **/
-    public var animate:Bool = false;
-
-    /**
-     * Calculates the total of each throw.
+     * calculate the total of each throw.
     **/
     public var total:Bool = false;
 
     function rollDie(die:Die):Int {
+        if (die.size <= 0) return die.bonus;
         return Std.random(die.size) + 1 + die.bonus;
     }
 
-    function throwDie(die:Die) {
-        var t = 0;
+    function throwDie(die:Die):Array<Int> {
+        var rolls:Array<Int> = [];
         for (i in 0...die.rolls) {
-            var roll = rollDie(die);
-            t += roll;
-            if (i != 0) Sys.print(", ");
-            Sys.print(roll);
+            rolls.push(rollDie(die));
         }
-        if (total) Sys.print(' (total:$t)');
-        Sys.print("\n");
+        return rolls;
     }
 
     function throwDice(die:Die) {
+        var rolls:Array<Array<Int>> = [];
         for (i in 0...die.throws) {
-            throwDie(die);
+            rolls.push(throwDie(die));
+        }
+
+        var ls = rolls.tabular();
+        if (!total) {
+            Sys.println(ls.join("\n"));
+            return;
+        }
+        var totals = rolls.map((rs) -> rs.fold((a, b) -> a + b, 0));
+        for (i => l in ls) {
+            Sys.println('$l (total: ${totals[i]})');
         }
     }
 
@@ -74,6 +77,7 @@ class Roll {
         };
         if (reg.matched(4) != null) d.bonus = Std.parseInt(reg.matched(4));
         if (reg.matched(6) != null) d.throws = Std.parseInt(reg.matched(6));
+
         throwDice(d);
     }
 
