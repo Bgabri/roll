@@ -29,7 +29,7 @@ class Roll implements ExceptionHandler implements bglib.cli.BaseCommand {
     public var total:Bool = false;
 
     /**
-     * Generate rolls from ANU QRNG
+     * generate rolls from http://qrandom.io
     **/
     public var qrand:Bool = false;
 
