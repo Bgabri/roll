@@ -1,3 +1,4 @@
+import bglib.ExceptionHandler;
 import bglib.cli.exceptions.MalformedRequest;
 
 using bglib.utils.PrimitiveTools;
@@ -20,17 +21,30 @@ typedef Die = {
  *          <throws> ::= 'x' <int>
  *     for example: roll 2d6+1x3
 **/
-@:build(bglib.cli.BaseCommand.build(true, "roll"))
-@:build(bglib.macros.ExceptionHandler.handle())
-class Roll {
+@:baseCommand(true, "roll")
+class Roll implements ExceptionHandler implements bglib.cli.BaseCommand {
     /**
      * calculate the total of each throw.
     **/
     public var total:Bool = false;
 
+    /**
+     * Generate rolls from ANU QRNG
+    **/
+    public var qrand:Bool = false;
+
     function rollDie(die:Die):Int {
         if (die.size <= 0) return die.bonus;
-        return Std.random(die.size) + 1 + die.bonus;
+        var v = 0;
+        if (qrand) {
+            try {
+                v = QRand.get(die.size);
+            } catch (e) {
+                v = Std.random(die.size);
+            }
+        } else v = Std.random(die.size);
+
+        return v + 1 + die.bonus;
     }
 
     function throwDie(die:Die):Array<Int> {
@@ -42,20 +56,24 @@ class Roll {
     }
 
     function throwDice(die:Die) {
+        if (qrand) QRand.buffer(die.size, die.throws * die.rolls);
         var rolls:Array<Array<Int>> = [];
         for (i in 0...die.throws) {
             rolls.push(throwDie(die));
         }
 
-        var ls = rolls.tabular();
-        if (!total) {
-            Sys.println(ls.join("\n"));
-            return;
-        }
         var totals = rolls.map((rs) -> rs.fold((a, b) -> a + b, 0));
-        for (i => l in ls) {
-            Sys.println('$l (total: ${totals[i]})');
+        var rolls = rolls.map((rs) -> rs.map((r) -> '$r'));
+        if (total) {
+            var header = [for (i in 0...die.rolls) ""];
+            header.push("total");
+            rolls.mapi((i, rs) -> rs.push(Std.string(totals[i])));
+            rolls.unshift(header);
         }
+        var ls = rolls.tabular(" │ ");
+        ls = ls.map(s -> '│ $s │');
+        if (total) ls[0] = ls[0].replace("│", " ");
+        Sys.println(ls.join("\n"));
     }
 
     /**
@@ -79,9 +97,5 @@ class Roll {
         if (reg.matched(6) != null) d.throws = Std.parseInt(reg.matched(6));
 
         throwDice(d);
-    }
-
-    static function create():Roll {
-        return new Roll();
     }
 }
